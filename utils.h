@@ -5,10 +5,10 @@
 #include "types.h"
 
 
-extern VOID KeInitializeAffinityEx(PKAFFINITY_EX affinity);
-extern VOID KeAddProcessorAffinityEx(PKAFFINITY_EX affinity, INT number);
-extern VOID HalSendNMI(PKAFFINITY_EX affinity);
-extern PLIST_ENTRY PsLoadedModuleList;
+extern "C" VOID KeInitializeAffinityEx(PKAFFINITY_EX affinity);
+extern "C" VOID KeAddProcessorAffinityEx(PKAFFINITY_EX affinity, INT number);
+extern "C" VOID HalSendNMI(PKAFFINITY_EX affinity);
+extern "C" PLIST_ENTRY PsLoadedModuleList;
 
 void* get_kernel_base();
 void* get_module_base(const wchar_t* module_name);

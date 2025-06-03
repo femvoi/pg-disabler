@@ -122,8 +122,8 @@
     <FilesToPackage Include="$(TargetPath)" />
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="source.c" />
-    <ClCompile Include="utils.c" />
+    <ClCompile Include="source.cpp" />
+    <ClCompile Include="utils.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="hexrays.h" />
