@@ -94,7 +94,7 @@ extern "C" NTSTATUS FxDriverEntry(PDRIVER_OBJECT DriverObject, PUNICODE_STRING R
 							patchguard_disabled = true;
 						}
 					}
-
+				
 				}
 			}
 		}
