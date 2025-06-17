@@ -127,7 +127,6 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="hexrays.h" />
-    <ClInclude Include="ia32.h" />
     <ClInclude Include="source.h" />
     <ClInclude Include="types.h" />
     <ClInclude Include="utils.h" />

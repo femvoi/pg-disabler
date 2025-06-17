@@ -88,3 +88,7 @@ UNICODE_STRING get_module_name(void* address) {
 
     return result;
 }
+
+PKPRCB KeGetCurrentPrcb() {
+    return (PKPRCB)__readgsqword(0x20);
+}
