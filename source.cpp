@@ -6,12 +6,6 @@ PKDPC decrypt_dpc_routine(PKTIMER timer) {
 
 	static __int64 KiWaitNever;
 	static __int64 KiWaitAlways;
-
-	UNICODE_STRING routineName;
-	RtlInitUnicodeString(&routineName, L"KeSetTimerEx");
-	PVOID KeSetTimerEx = MmGetSystemRoutineAddress(&routineName);
-	if (!KeSetTimerEx)
-		return nullptr;
 	
 	if (!KiWaitNever || !KiWaitAlways) {
 		unsigned char function_dism[64];
@@ -77,7 +71,9 @@ extern "C" NTSTATUS DriverEntry(PDRIVER_OBJECT DriverObject, PUNICODE_STRING Reg
 					}
 
 					if ((__int64)dpc->DeferredContext >> 47 != -1 && (__int64)dpc->DeferredContext >> 47 != 0) {
-						KeCancelTimer(timer);
+						if (!KeCancelTimer(timer)) {
+							return STATUS_UNSUCCESSFUL;
+						}
 					}
 
 				}
