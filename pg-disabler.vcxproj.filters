@@ -24,27 +24,27 @@
     </Inf>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="utils.cpp">
+    <ClCompile Include="src\utils.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="source.cpp">
+    <ClCompile Include="src\source.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="utils.h">
+    <ClInclude Include="src\utils.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="types.h">
+    <ClInclude Include="src\types.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="source.h">
+    <ClInclude Include="src\source.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="hexrays.h">
+    <ClInclude Include="src\hexrays.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="hook.hpp">
+    <ClInclude Include="src\hook.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

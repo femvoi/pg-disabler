@@ -132,15 +132,15 @@
     <FilesToPackage Include="$(TargetPath)" />
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="source.cpp" />
-    <ClCompile Include="utils.cpp" />
+    <ClCompile Include="src\source.cpp" />
+    <ClCompile Include="src\utils.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="hexrays.h" />
-    <ClInclude Include="hook.hpp" />
-    <ClInclude Include="source.h" />
-    <ClInclude Include="types.h" />
-    <ClInclude Include="utils.h" />
+    <ClInclude Include="src\hexrays.h" />
+    <ClInclude Include="src\hook.hpp" />
+    <ClInclude Include="src\source.h" />
+    <ClInclude Include="src\types.h" />
+    <ClInclude Include="src\utils.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
