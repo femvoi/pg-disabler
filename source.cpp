@@ -41,7 +41,7 @@ NTSTATUS NtOpenProcess_Hook(
 	_In_ POBJECT_ATTRIBUTES ObjectAttributes,
 	_In_opt_ PCLIENT_ID ClientId)
 {
- 
+
 	NTSTATUS status = NtOpenProcess(ProcessHandle, DesiredAccess, ObjectAttributes, ClientId);
 
 
@@ -115,24 +115,13 @@ extern "C" NTSTATUS FxDriverEntry(PDRIVER_OBJECT DriverObject, PUNICODE_STRING R
 							patchguard_disabled = true;
 						}
 					}
-				
+
 				}
 			}
 		}
 	}
 
-	unsigned char patch = { 0xC3 };
-
-	hook::write_to_read_only_memory(KeBugCheckEx, &patch, sizeof(patch));
-	
-	unsigned char bytes[1] = {};
-
-	RtlCopyMemory(bytes, KeBugCheckEx, sizeof(bytes));
-
-	DbgPrint("bytes %x", bytes[0]);
-
 	DbgPrint("patchguard status %s", patchguard_disabled ? "disabled" : "enabled");
 
 	return patchguard_disabled ? STATUS_SUCCESS : STATUS_UNSUCCESSFUL;
 }
-
