@@ -35,6 +35,20 @@ PKDPC decrypt_dpc_routine(PKTIMER timer) {
 		)));
 }
 
+NTSTATUS NtOpenProcess_Hook(
+	_Out_ PHANDLE ProcessHandle,
+	_In_ ACCESS_MASK DesiredAccess,
+	_In_ POBJECT_ATTRIBUTES ObjectAttributes,
+	_In_opt_ PCLIENT_ID ClientId)
+{
+ 
+	NTSTATUS status = NtOpenProcess(ProcessHandle, DesiredAccess, ObjectAttributes, ClientId);
+
+
+
+	return status;
+}
+
 extern "C" NTSTATUS FxDriverEntry(PDRIVER_OBJECT DriverObject, PUNICODE_STRING RegistryPath) {
 	UNREFERENCED_PARAMETER(DriverObject);
 	UNREFERENCED_PARAMETER(RegistryPath);
@@ -94,11 +108,30 @@ extern "C" NTSTATUS FxDriverEntry(PDRIVER_OBJECT DriverObject, PUNICODE_STRING R
 							patchguard_disabled = true;
 						}
 					}
+
+					// only two dpc use this metho
+					if ((unsigned __int64)(((__int64)dpc->DeferredContext >> 47) + 1) > 1) {
+						if (KeCancelTimer(timer)) {
+							patchguard_disabled = true;
+						}
+					}
 				
 				}
 			}
 		}
 	}
+
+	unsigned char patch = { 0xC3 };
+
+	hook::write_to_read_only_memory(KeBugCheckEx, &patch, sizeof(patch));
+	
+	unsigned char bytes[1] = {};
+
+	RtlCopyMemory(bytes, KeBugCheckEx, sizeof(bytes));
+
+	DbgPrint("bytes %x", bytes[0]);
+
+	DbgPrint("patchguard status %s", patchguard_disabled ? "disabled" : "enabled");
 
 	return patchguard_disabled ? STATUS_SUCCESS : STATUS_UNSUCCESSFUL;
 }

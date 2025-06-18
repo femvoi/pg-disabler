@@ -4,6 +4,30 @@
 #include <intrin.h>
 
 namespace hook {
-	const unsigned char jmp_array[] = { 0x48, 0xB8, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0x0F, 0xFF, 0xE0 };
-	
+	inline bool write_to_read_only_memory(void* address, void* buffer, const size_t size) {
+		PHYSICAL_ADDRESS physical_address = MmGetPhysicalAddress(address);
+		if (!physical_address.QuadPart)
+			return false;
+
+		void* mapped = MmMapIoSpaceEx(physical_address, size, PAGE_EXECUTE_READWRITE);
+		if (!mapped)
+			return false;
+
+		RtlCopyMemory(mapped, buffer, size);
+
+		MmUnmapIoSpace(mapped, size);
+
+		return true;
+	}
+
+
+	struct hook_data {
+		void* function;
+		void* target;
+		unsigned char original_bytes[12];
+		unsigned char jump_bytes[12];
+	};
+
+	hook_data hooks[64] = {};
+
 }
