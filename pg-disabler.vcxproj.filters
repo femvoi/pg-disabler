@@ -24,10 +24,10 @@
     </Inf>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="source.cpp">
+    <ClCompile Include="utils.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="utils.cpp">
+    <ClCompile Include="source.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>

