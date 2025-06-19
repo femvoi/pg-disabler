@@ -44,8 +44,5 @@
     <ClInclude Include="src\hexrays.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="src\hook.hpp">
-      <Filter>Header Files</Filter>
-    </ClInclude>
   </ItemGroup>
 </Project>

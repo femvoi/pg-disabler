@@ -3,7 +3,6 @@
 #include <ntifs.h>
 #include <ntddk.h>
 #include <intrin.h>
-#include "hook.hpp"
 #include "utils.h"
 #include "hexrays.h"
 
