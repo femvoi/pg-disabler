@@ -10,7 +10,6 @@ extern "C" NTKERNELAPI void* NTAPI RtlFindExportedRoutineByName(
 	_In_ PCCH RoutineName
 );
 
-
 void* get_kernel_base();
 void* get_module_base(const wchar_t* module_name);
 void* get_kernel_function(const wchar_t* function_name);

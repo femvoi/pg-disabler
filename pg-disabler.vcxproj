@@ -137,6 +137,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="src\hexrays.h" />
+    <ClInclude Include="src\khook.h" />
     <ClInclude Include="src\source.h" />
     <ClInclude Include="src\types.h" />
     <ClInclude Include="src\utils.h" />

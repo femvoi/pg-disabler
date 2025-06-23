@@ -73,7 +73,7 @@ PKDPC decrypt_dpc_routine(PKTIMER timer) {
 		*/
 
 		for (size_t idx = 0; idx < sizeof(KeSetTimerEx_dism); idx++) {
-			// mov rax, qword ptr [rip+imm32]
+			// mov rax, qword ptr [rip+imm32] 
 			if (KiSetTimerEx_dism[idx] == 0xf1 && KiSetTimerEx_dism[idx + 1] == 0x48 && KiSetTimerEx_dism[idx + 2] == 0x8b && KiSetTimerEx_dism[idx + 3] == 0x05) {
 				uint32_t relative_offset = *(uint32_t*)&KiSetTimerEx_dism[idx + 4];
 				uint64_t instruction_address = (uint64_t)KiSetTimerEx + idx + 1; // because we check the previous byte for insuring we skip the security cookie
@@ -152,13 +152,10 @@ extern "C" NTSTATUS FxDriverEntry(PDRIVER_OBJECT DriverObject, PUNICODE_STRING R
 
 	bool patchguard_disabled = false;
 
-	const unsigned char patch[] = {0xC3, 0x90};
+	const unsigned char patch[] = { 0xC3, 0x90 };
 
 	for (int i = 0; i < 5; i++) {
 		KAFFINITY active_processers = KeQueryActiveProcessors();
-
-		_disable();
-		KeEnterCriticalRegion();
 
 		for (int core = 0; active_processers; core++, active_processers >>= 1) {
 			if (active_processers & 1) {
@@ -208,7 +205,14 @@ extern "C" NTSTATUS FxDriverEntry(PDRIVER_OBJECT DriverObject, PUNICODE_STRING R
 						if (!dpc || !MmIsAddressValid(dpc)) {
 							continue;
 						}
-
+						
+						//if (!is_inside_module(dpc->DeferredContext)) {
+						//	if (KeCancelTimer(timer)) {
+						//		RtlForceCopyMemory(dpc->DeferredRoutine, patch, sizeof(patch));
+						//		patchguard_disabled = true;
+						//	}
+						//}
+						// 
 						// common dpc method
 						if ((__int64)dpc->DeferredContext >> 47 != -1 && (__int64)dpc->DeferredContext >> 47 != 0) {
 							if (KeCancelTimer(timer)) {
@@ -238,8 +242,6 @@ extern "C" NTSTATUS FxDriverEntry(PDRIVER_OBJECT DriverObject, PUNICODE_STRING R
 			}
 		}
 
-		_enable();
-		KeLeaveCriticalRegion();
 	}
 
 	if (!patchguard_disabled) {
