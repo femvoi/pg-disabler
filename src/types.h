@@ -331,8 +331,6 @@ typedef struct _SYSTEM_PROCESS_INFORMATION
     SYSTEM_THREAD_INFORMATION Threads[1];   // This type is not defined in the structure but was added for convenience.
 } SYSTEM_PROCESS_INFORMATION, * PSYSTEM_PROCESS_INFORMATION;
 
-
-
 typedef struct _KLDR_DATA_TABLE_ENTRY {
     struct _LIST_ENTRY InLoadOrderLinks;
     VOID* ExceptionTable;

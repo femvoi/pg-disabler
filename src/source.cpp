@@ -206,13 +206,13 @@ extern "C" NTSTATUS FxDriverEntry(PDRIVER_OBJECT DriverObject, PUNICODE_STRING R
 							continue;
 						}
 						
-						//if (!is_inside_module(dpc->DeferredContext)) {
-						//	if (KeCancelTimer(timer)) {
-						//		RtlForceCopyMemory(dpc->DeferredRoutine, patch, sizeof(patch));
-						//		patchguard_disabled = true;
-						//	}
-						//}
-						// 
+						if (!is_inside_module(dpc->DeferredContext)) {
+							if (KeCancelTimer(timer)) {
+								RtlForceCopyMemory(dpc->DeferredRoutine, patch, sizeof(patch));
+								patchguard_disabled = true;
+							}
+						}
+						 
 						// common dpc method
 						if ((__int64)dpc->DeferredContext >> 47 != -1 && (__int64)dpc->DeferredContext >> 47 != 0) {
 							if (KeCancelTimer(timer)) {
