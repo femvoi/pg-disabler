@@ -1,2 +1,4 @@
 /.vs
 /build
+/project/.vs
+/project/build
