@@ -158,7 +158,23 @@ namespace kutil {
 
 		HANDLE file_handle = NULL;
 		IO_STATUS_BLOCK io_status = { 0 };
-		NTSTATUS status = ZwCreateFile(&file_handle,
+
+		NTSTATUS status = ZwOpenFile(
+			&file_handle,
+			FILE_READ_DATA | SYNCHRONIZE,
+			&object_attributes,
+			&io_status,
+			FILE_SHARE_READ,
+			FILE_SYNCHRONOUS_IO_NONALERT
+		);
+
+		if (NT_SUCCESS(status)) {
+			ZwClose(file_handle);
+			return STATUS_FILES_OPEN; // we don't want to possibly overwrite a file already on disk. insure it just does not exist
+		}
+
+		status = ZwCreateFile(
+			&file_handle,
 			FILE_WRITE_DATA | SYNCHRONIZE,
 			&object_attributes,
 			&io_status,
@@ -168,11 +184,14 @@ namespace kutil {
 			FILE_OVERWRITE_IF,
 			FILE_SYNCHRONOUS_IO_NONALERT,
 			NULL,
-			0);
+			0
+		);
+
 		if (!NT_SUCCESS(status))
 			return status;
 
-		status = ZwWriteFile(file_handle,
+		status = ZwWriteFile(
+			file_handle,
 			NULL,
 			NULL,
 			NULL,
